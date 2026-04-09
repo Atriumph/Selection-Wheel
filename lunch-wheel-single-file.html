@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>今天午餐吃什么</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --wheel-border: #334155;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --panel-bg: rgba(255, 255, 255, 0.8);
+      --shadow-sm: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top right, #e2e8f0, #f8fafc);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: min(95vw, 480px);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* 标题区域 */
+    .header { text-align: center; }
+    .header h1 { 
+      margin: 0; font-size: 2.5rem; font-weight: 900; 
+      background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p { margin: 8px 0 0; color: var(--text-muted); font-size: 0.9rem; letter-spacing: 1px; }
+
+    /* 转盘外壳 */
+    .wheel-container {
+      position: relative;
+      width: 360px;
+      height: 360px;
+      padding: 12px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* 精致指针 */
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      width: 46px;
+      height: 54px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    }
+    .pointer-icon {
+      fill: #1e293b;
+      stroke: white;
+      stroke-width: 3;
+    }
+
+    /* 转盘主体 */
+    .wheel-main {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 6px solid var(--wheel-border);
+      transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1);
+      will-change: transform;
+    }
+
+    /* 装饰中心轴 */
+    .wheel-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 44px;
+      background: white;
+      border: 4px solid var(--wheel-border);
+      border-radius: 50%;
+      z-index: 10;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 扇区文字排列 */
+    .sector-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 0 50%;
+      padding-left: 60px; /* 文字距离圆心的距离 */
+      color: white;
+      font-weight: 800;
+      font-size: 16px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* 控制区 */
+    .actions { display: flex; gap: 12px; width: 100%; }
+    
+    button {
+      flex: 1;
+      padding: 16px;
+      border: none;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 0 #000;
+    }
+
+    #spin-btn { background: #3b82f6; color: white; box-shadow: 0 6px 0 #1d4ed8; }
+    #spin-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1d4ed8; }
+    #spin-btn:disabled { background: #94a3b8; box-shadow: 0 4px 0 #64748b; opacity: 0.7; }
+
+    #reset-btn { background: white; color: var(--text-main); border: 2px solid #e2e8f0; box-shadow: 0 4px 0 #e2e8f0; }
+    #reset-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #e2e8f0; }
+
+    /* 结果显示 */
+    .result-card {
+      width: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+
+    .result-text { font-size: 1.5rem; font-weight: 800; min-height: 2rem; margin-bottom: 8px; color: #1e293b; }
+    .history-text { font-size: 0.85rem; color: var(--text-muted); }
+
+    .celebrate { animation: celebrate 0.5s ease; }
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @media (max-width: 400px) {
+      .wheel-container { width: 300px; height: 300px; }
+      .sector-label { padding-left: 50px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>午餐吃什么</h1>
+      <p>解决人类终极难题</p>
+    </div>
+
+    <div class="wheel-container">
+      <svg class="pointer" viewBox="0 0 46 54">
+        <path class="pointer-icon" d="M23 54L42.0526 21.75H3.94744L23 54Z" />
+        <circle cx="23" cy="18" r="14" fill="#1e293b" />
+      </svg>
+      
+      <div class="wheel-main" id="wheel"></div>
+      <div class="wheel-center"></div>
+    </div>
+
+    <div class="result-card" id="result-card">
+      <div class="result-text" id="result-display">准备好开饭了吗？</div>
+      <div class="history-text" id="history-display">历史记录：暂无</div>
+    </div>
+
+    <div class="actions">
+      <button id="spin-btn">开始抽取</button>
+      <button id="reset-btn">清空</button>
+    </div>
+  </div>
+
+  <script>
+    const options = [
+      { name: "香河肉饼", weight: 2, color: "#ef4444" },
+      { name: "安徽牛肉板面", weight: 2, color: "#f59e0b" },
+      { name: "老门框盒饭", weight: 2, color: "#10b981" },
+      { name: "西部马华", weight: 2, color: "#3b82f6" },
+      { name: "凉皮、鸡蛋灌饼", weight: 2, color: "#8b5cf6" },
+      { name: "负一自选", weight: 1, color: "#64748b" }
+    ];
+
+    const wheel = document.getElementById('wheel');
+    const spinBtn = document.getElementById('spin-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const resultDisplay = document.getElementById('result-display');
+    const historyDisplay = document.getElementById('history-display');
+    const resultCard = document.getElementById('result-card');
+
+    let currentRotation = 0;
+    let isSpinning = false;
+    let history = [];
+
+    // 初始化转盘渲染
+    function initWheel() {
+      const totalWeight = options.reduce((s, o) => s + o.weight, 0);
+      let currentAngle = 0;
+      
+      const conicParts = options.map(opt => {
+        const angle = (opt.weight / totalWeight) * 360;
+        const part = `${opt.color} ${currentAngle}deg ${(currentAngle + angle)}deg`;
+        
+        // 创建文字标签
+        const labelWrap = document.createElement('div');
+        labelWrap.className = 'sector-label';
+        labelWrap.style.transform = `rotate(${currentAngle + angle/2 - 90}deg)`;
+        labelWrap.innerHTML = `<span>${opt.name}</span>`;
+        wheel.appendChild(labelWrap);
+        
+        currentAngle += angle;
+        return part;
+      });
+
+      wheel.style.background = `conic-gradient(${conicParts.join(',')})`;
+    }
+
+    // 根据权重计算随机结果
+    function getWeightedRandom() {
+      const totalWeight = options.reduce((s, o) => s + o.weight, 0);
+      let random = Math.random() * totalWeight;
+      let cumulativeWeight = 0;
+      let currentAngle = 0;
+
+      for (const opt of options) {
+        const sectorAngle = (opt.weight / totalWeight) * 360;
+        cumulativeWeight += opt.weight;
+        if (random <= cumulativeWeight) {
+          // 返回选中的项目及其角度中心点
+          return {
+            name: opt.name,
+            angle: currentAngle + sectorAngle / 2
+          };
+        }
+        currentAngle += sectorAngle;
+      }
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      
+      isSpinning = true;
+      spinBtn.disabled = true;
+      resultDisplay.textContent = "正在寻找美食...";
+      resultCard.classList.remove('celebrate');
+
+      const result = getWeightedRandom();
+      // 计算目标旋转角度：
+      // 1. 至少转5圈 (1800deg)
+      // 2. 减去结果在中奖区域的角度 (因为指针在正上方0度，转盘顺时针转)
+      const extraSpins = (5 + Math.floor(Math.random() * 5)) * 360;
+      const targetAngle = extraSpins + (360 - result.angle);
+      
+      currentRotation += targetAngle - (currentRotation % 360);
+      wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+      setTimeout(() => {
+        isSpinning = false;
+        spinBtn.disabled = false;
+        
+        // 更新UI
+        resultDisplay.textContent = `今天吃：${result.name}`;
+        resultCard.classList.add('celebrate');
+        
+        // 更新历史
+        history.unshift(result.name);
+        if (history.length > 5) history.pop();
+        historyDisplay.textContent = `历史记录：${history.join(' → ')}`;
+      }, 5000); // 对应CSS中的5s动画
+    }
+
+    function reset() {
+      if (isSpinning) return;
+      history = [];
+      currentRotation = 0;
+      wheel.style.transition = 'none';
+      wheel.style.transform = `rotate(0deg)`;
+      resultDisplay.textContent = "准备好开饭了吗？";
+      historyDisplay.textContent = "历史记录：暂无";
+      setTimeout(() => wheel.style.transition = '', 50);
+    }
+
+    spinBtn.addEventListener('click', spin);
+    resetBtn.addEventListener('click', reset);
+
+    // 初始化
+    initWheel();
+  </script>
+</body>
+</html>
